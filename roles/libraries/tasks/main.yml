@@ -1,0 +1,126 @@
+---
+# === Download Libs ====
+- name: Download GMP library
+  get_url:
+    url: "{{ libgmp_url }}"
+    dest: "{{ downloads_dir }}"
+  register: gpm_download
+- name: Download FLINT library
+  get_url:
+    url: "{{ libflint_url }}"
+    dest: "{{ downloads_dir }}"
+  register: flint_download
+- name: Download MPFR library
+  get_url:
+    url: "{{ libmpfr_url }}"
+    dest: "{{ downloads_dir }}"
+  register: mpfr_download
+# === Unpack Libs ====
+- name: Unpack downloaded libraries
+  block:
+    - name: Unpack GMP library
+      unarchive:
+        src: "{{ downloads_dir }}{{ libgmp_filename }}"
+        dest: "{{ downloads_dir }}"
+        remote_src: yes
+      when: gpm_download is changed
+    - name: Unpack FLINT library
+      unarchive:
+        src: "{{ downloads_dir }}{{ libflint_filename }}"
+        dest: "{{ downloads_dir }}"
+        remote_src: yes
+      when: flint_download is changed
+    - name: Unpack MPFR library
+      unarchive:
+        src: "{{ downloads_dir }}{{ libmpfr_filename }}"
+        dest: "{{ downloads_dir }}"
+        remote_src: yes
+      when: mpfr_download is changed
+    - name: Set paths to unpacked libraries
+      set_fact: 
+        gmp_dir: "{{ ((libgmp_filename | splitext)[0] | splitext)[0] }}"
+        flint_dir: "{{ ((libflint_filename | splitext)[0] | splitext)[0] }}"
+        mpfr_dir: "{{ ((libmpfr_filename | splitext)[0] | splitext)[0] }}"
+# === Install GMP ====
+- name: Install GMP
+  block:
+    - name: GMP -> configure
+      command: ./configure
+      args:
+        chdir: "{{ downloads_dir }}{{ gmp_dir }}"
+    - name: GMP -> make
+      make:
+        chdir: "{{ downloads_dir }}{{ gmp_dir }}"
+    - name: GMP -> check
+      make:
+        chdir: "{{ downloads_dir }}{{ gmp_dir }}"
+        target: check
+    - name: GMP -> install
+      make:
+        chdir: "{{ downloads_dir }}{{ gmp_dir }}"
+        target: install
+      become: yes
+      become_method: sudo
+  when: gpm_download is changed
+# === Install MPFR ====
+- name: Install MPFR
+  block:
+    - name: MPFR -> configure
+      command: ./configure
+      args:
+        chdir: "{{ downloads_dir }}{{ mpfr_dir }}"
+    - name: MPFR -> make
+      make:
+        chdir: "{{ downloads_dir }}{{ mpfr_dir }}"
+    - name: MPFR -> check
+      make:
+        chdir: "{{ downloads_dir }}{{ mpfr_dir }}"
+        target: check
+      environment:
+        VERBOSE: 1
+    - name: MPFR -> install
+      make:
+        chdir: "{{ downloads_dir }}{{ mpfr_dir }}"
+        target: install
+      become: yes
+      become_method: sudo
+  when: mpfr_download is changed
+# === Install FLINT ====
+- name: Install FLINT
+  block:
+    - name: FLINT -> configure
+      command: ./configure --with-gmp --with-mpfr # Assumes args --with-gmp={{ /usr/local }} --with-mpfr={{ /usr/local }}
+      args:
+        chdir: "{{ downloads_dir }}{{ flint_dir }}"
+    - name: FLINT -> fix Makefile issues by copying fixes
+      copy:
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+      with_items:
+        - { src: "{{ local_flint_fixes_dir }}/Makefile.subdirs", dest: "{{ downloads_dir }}{{ flint_dir }}/" }
+        - { src: "{{ local_flint_fixes_dir }}/fq/Makefile", dest: "{{ downloads_dir }}{{ flint_dir }}/fq/Makefile" }
+        - { src: "{{ local_flint_fixes_dir }}/fq_poly/Makefile", dest: "{{ downloads_dir }}{{ flint_dir }}/fq_poly/Makefile" }
+        - { src: "{{ local_flint_fixes_dir }}/padic_mat/Makefile", dest: "{{ downloads_dir }}{{ flint_dir }}/padic_mat/Makefile" }
+        - { src: "{{ local_flint_fixes_dir }}/padic_poly/Makefile", dest: "{{ downloads_dir }}{{ flint_dir }}/padic_poly/Makefile" }
+        - { src: "{{ local_flint_fixes_dir }}/qadic/Makefile", dest: "{{ downloads_dir }}{{ flint_dir }}/qadic/Makefile" }
+    - name: FLINT -> make
+      make:
+        chdir: "{{ downloads_dir }}{{ flint_dir }}"
+      no_log: true
+      async: 3600
+      poll: 30
+    - name: FLINT -> check
+      make:
+        chdir: "{{ downloads_dir }}{{ flint_dir }}"
+        target: check
+      no_log: true
+      async: 3600
+      poll: 30
+    - name: FLINT -> install
+      make:
+        chdir: "{{ downloads_dir }}{{ flint_dir }}"
+        target: install
+      become: yes
+      become_method: sudo
+      register: flint_installed
+  when: flint_download is changed or flint_installed is not defined

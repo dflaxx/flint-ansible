@@ -1,0 +1,59 @@
+---
+# apt stuff
+- name: Install package manager packages
+  apt: 
+    name: "{{ item }}"
+    state: latest
+  with_items:
+    - python3-apt
+    - aptitude
+  become: yes
+  become_method: sudo
+  async: 300
+  poll: 10
+- name: Upgrade all packages to the latest version
+  apt:
+    name: "*"
+    state: latest
+    update_cache: yes
+  become: yes
+  become_method: sudo
+  async: 300
+  poll: 10
+- name: Install build tools (GCC compiler suite, cmake)
+  apt:
+    name: "{{ item }}"
+    state: latest
+  with_items:
+    - build-essential
+    - cmake
+  become: yes
+  become_method: sudo
+  async: 300
+  poll: 10
+- name: "Install tools: tar, zip, unzip, rsync"
+  apt: 
+    name: "{{ item }}"
+    state: latest
+  with_items:
+    - tar
+    - zip
+    - unzip
+    - lzip
+    - rsync
+  become: yes
+  become_method: sudo
+- name: "Install GMP prerequisites: m4"
+  apt: 
+    name: "{{ item }}"
+    state: latest
+  with_items:
+    - m4
+  become: yes
+  become_method: sudo
+# Storage stuff
+- name: Create general directory for storing downloads
+  file:
+    path: "{{ downloads_dir }}"
+    state: directory
+    mode: 0755

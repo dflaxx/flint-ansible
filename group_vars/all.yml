@@ -1,0 +1,12 @@
+---
+local_files_dir: "{{ playbook_dir }}/files"
+local_flint_fixes_dir: "{{ local_files_dir }}/flint_update"
+downloads_dir: /home/{{ ansible_user_id }}/downloads/
+lib_dir: /usr/local/lib/
+include_dir: /usr/local/include/
+libgmp_filename: gmp-6.1.2.tar.lz
+libgmp_url: https://gmplib.org/download/gmp/{{ libgmp_filename }}
+libflint_filename: flint-2.5.2.tar.gz
+libflint_url: http://www.flintlib.org/{{ libflint_filename }}
+libmpfr_filename: mpfr-4.0.1.tar.gz
+libmpfr_url: https://www.mpfr.org/mpfr-current/{{ libmpfr_filename }}
